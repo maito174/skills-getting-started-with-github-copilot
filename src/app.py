@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 import os
 from pathlib import Path
+from pydantic import BaseModel, Field
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
@@ -20,6 +21,62 @@ app.mount("/static", StaticFiles(directory=os.path.join(Path(__file__).parent,
           "static")), name="static")
 
 # In-memory activity database
+activities = {
+    "Chess Club": {
+        "description": "Learn strategies and compete in chess tournaments",
+        "schedule": "Fridays, 3:30 PM - 5:00 PM",
+        "max_participants": 12,
+        "participants": ["michael@mergington.edu", "daniel@mergington.edu"]
+    },
+    "Programming Class": {
+        "description": "Learn programming fundamentals and build software projects",
+        "schedule": "Tuesdays and Thursdays, 3:30 PM - 4:30 PM",
+        "max_participants": 20,
+        "participants": ["emma@mergington.edu", "sophia@mergington.edu"]
+    },
+    "Gym Class": {
+        "description": "Physical education and sports activities",
+        "schedule": "Mondays, Wednesdays, Fridays, 2:00 PM - 3:00 PM",
+        "max_participants": 30,
+        "participants": ["john@mergington.edu", "olivia@mergington.edu"]
+    },
+    "Basketball Team": {
+        "description": "Competitive basketball team for all skill levels",
+        "schedule": "Tuesdays and Thursdays, 4:00 PM - 5:30 PM",
+        "max_participants": 15,
+        "participants": []
+    },
+    "Tennis Club": {
+        "description": "Learn and practice tennis techniques",
+        "schedule": "Mondays and Wednesdays, 3:30 PM - 5:00 PM",
+        "max_participants": 12,
+        "participants": []
+    },
+    "Debate Team": {
+        "description": "Develop public speaking and critical thinking skills",
+        "schedule": "Thursdays, 3:30 PM - 5:00 PM",
+        "max_participants": 20,
+        "participants": []
+    },
+    "Science Club": {
+        "description": "Explore scientific concepts through experiments and projects",
+        "schedule": "Wednesdays, 3:30 PM - 5:00 PM",
+        "max_participants": 18,
+        "participants": []
+    },
+    "Drama Club": {
+        "description": "Perform in theater productions and develop acting skills",
+        "schedule": "Mondays and Wednesdays, 4:00 PM - 5:30 PM",
+        "max_participants": 25,
+        "participants": []
+    },
+    "Art Studio": {
+        "description": "Create paintings, sculptures, and digital art",
+        "schedule": "Tuesdays and Fridays, 3:30 PM - 5:00 PM",
+        "max_participants": 16,
+        "participants": []
+    }
+}
 activities = {
     "Chess Club": {
         "description": "Learn strategies and compete in chess tournaments",
@@ -53,15 +110,15 @@ def get_activities():
 
 
 @app.post("/activities/{activity_name}/signup")
-def signup_for_activity(activity_name: str, email: str):
+def signup_for_activity(activity_name: str, payload: SignupPayload):
     """Sign up a student for an activity"""
     # Validate activity exists
-    if activity_name not in activities:
-        raise HTTPException(status_code=404, detail="Activity not found")
-
-    # Get the specific activity
-    activity = activities[activity_name]
-
-    # Add student
-    activity["participants"].append(email)
-    return {"message": f"Signed up {email} for {activity_name}"}
+    for activity in activities:
+        if activity["name"] == activity_name:
+            email = payload.email.strip().lower()
+            # 既に登録済みか検証
+            if email in activity["participants"]:
+                raise HTTPException(status_code=400, detail="Student already signed up")
+            activity["participants"].append(email)
+            return {"message": "Signed up"}
+    raise HTTPException(status_code=404, detail="Activity not found")
